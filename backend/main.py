@@ -37,19 +37,21 @@ def get_db():
     finally:
         db.close()
 
+@app.get("/get/messages")
+async def root():
+    db = SessionLocal()
+    messages = db.query(ChatHistory).filter_by(user_id=1).all()
+    return {"messages": messages}
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(message: Message, db: Session = Depends(get_db)):
     try:
-        userHistory = db.query(ChatHistory).filter_by(user_id=1).all()
-        for history in userHistory:
-            print(
-                f"ID: {history.id}, "
-                f"User ID: {history.user_id}, "
-                f"Message: {history.user_message}, "
-                f"Response: {history.bot_response}, "
-                f"Timestamp: {history.timestamp}"
-            )
-        response = chat_bot.get_response(message.content)
+        user_history = db.query(ChatHistory).filter_by(user_id=1).all()
+        chat_history_str = ""
+        for history in user_history:
+            chat_history_str += f"User: {history.user_message}\nBot: {history.bot_response}\n"
+            full_message = f"{chat_history_str}User: {message.content}"
+        response = chat_bot.get_response(full_message)
         
         # Sohbeti veritabanına kaydet
         chat_record = ChatHistory(

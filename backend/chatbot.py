@@ -51,11 +51,12 @@ class CustomChatBot:
         return self.add_random_emoji("Sohbet geçmişini temizledim! Yeni bir konuya geçebiliriz!")
 
     def get_response(self, user_input: str) -> str:
+
         self.conversation_history.append({"role": "user", "content": user_input})
         
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=self.conversation_history,
                 temperature=0.85,
                 max_tokens=1000
