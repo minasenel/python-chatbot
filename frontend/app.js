@@ -5,7 +5,7 @@ function App() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
-
+    console.log("Start Frontend");
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -29,7 +29,7 @@ function App() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ content: userMessage }),
+                body: JSON.stringify({ content: userMessage, user_id: 1 }),
             });
 
             const data = await response.json();
