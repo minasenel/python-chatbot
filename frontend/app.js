@@ -5,7 +5,52 @@ function App() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
-    console.log("Start Frontend");
+
+    // Load chat history on component mount
+    useEffect(() => {
+        const loadHistory = async () => {
+            try {
+                console.log('Geçmiş mesajlar yükleniyor...');
+                const response = await fetch('http://localhost:8000/chat/history/1');
+                const data = await response.json();
+                if (data.history) {
+                    console.log('Yüklenen geçmiş:', data.history);
+                    const historyMessages = data.history.flatMap(item => [
+                        { 
+                            role: 'user', 
+                            content: item.user_message,
+                            timestamp: item.timestamp 
+                        },
+                        { 
+                            role: 'assistant', 
+                            content: item.bot_response,
+                            timestamp: item.timestamp 
+                        }
+                    ]);
+                    setMessages(historyMessages);
+                } else {
+                    console.log('Geçmiş mesaj bulunamadı.');
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        };
+        loadHistory();
+    }, []);
+
+    useEffect(() => {
+        const savedMessages = localStorage.getItem('chatHistory');
+        if (savedMessages) {
+            console.log('LocalStorage\'dan yüklenen mesajlar:', JSON.parse(savedMessages));
+            setMessages(JSON.parse(savedMessages));
+        }
+    }, []);
+
+    useEffect(() => {
+        console.log('LocalStorage\'a kaydedilen mesajlar:', messages);
+        localStorage.setItem('chatHistory', JSON.stringify(messages));
+    }, [messages]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -20,7 +65,11 @@ function App() {
 
         const userMessage = input;
         setInput('');
-        setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        setMessages(prev => [...prev, { 
+            role: 'user', 
+            content: userMessage,
+            timestamp: new Date().toISOString() 
+        }]);
         setIsLoading(true);
 
         try {
@@ -34,7 +83,13 @@ function App() {
 
             const data = await response.json();
             if (data.success) {
-                setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+                setMessages(prev => [...prev, { 
+                    role: 'assistant', 
+                    content: data.response,
+                    timestamp: new Date().toISOString()
+                }]);
+                console.log('API yanıtı:', data);
+                console.log('Güncellenen mesajlar:', messages);
             } else {
                 throw new Error(data.error || 'Bir hata oluştu');
             }
@@ -42,7 +97,8 @@ function App() {
             console.error('Error:', error);
             setMessages(prev => [...prev, { 
                 role: 'assistant', 
-                content: '❌ Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.' 
+                content: '❌ Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.',
+                timestamp: new Date().toISOString()
             }]);
         } finally {
             setIsLoading(false);
@@ -79,14 +135,22 @@ function App() {
                     {messages.map((message, index) => (
                         <div
                             key={index}
-                            className={`p-4 rounded-lg ${
+                            className={`p-4 rounded-lg relative ${
                                 message.role === 'user'
                                     ? 'bg-blue-100 ml-12'
                                     : 'bg-gray-100 mr-12'
                             }`}
                         >
-                            <div className="font-bold mb-1">
-                                {message.role === 'user' ? '👤 Sen' : '🤖 Asistan'}
+                            <div className="flex justify-between items-center mb-1">
+                                <div className="font-bold">
+                                    {message.role === 'user' ? '👤 Sen' : '🤖 Asistan'}
+                                </div>
+                                <div className="text-sm text-timestamp">
+                                    {new Date(message.timestamp).toLocaleTimeString('tr-TR', {
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
+                                </div>
                             </div>
                             <div className="text-gray-700">{message.content}</div>
                         </div>

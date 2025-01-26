@@ -4,16 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mühendislik Öğrencisi Asistanı</title>
+    
+    <!-- Fonts for better typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
     <!-- React -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Tailwind CSS -->
+    
+    <!-- Tailwind CSS with custom chat colors -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'user-message': '#2563eb',    // Blue
+                        'bot-message': '#4f46e5',     // Indigo
+                        'timestamp': '#6b7280'        // Gray
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div id="root"></div>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <div id="root" class="container mx-auto max-w-3xl p-4"></div>
     <script type="text/babel" src="app.js"></script>
 </body>
-</html> 
+</html>

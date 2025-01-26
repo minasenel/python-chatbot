@@ -3,16 +3,12 @@
   "version": "1.0.0",
   "description": "Frontend application",
   "private": true,
-  "author": "",
-  "license": "ISC",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "dev": "serve -l 3000",
+    "start": "npm run dev"
   },
-  "dependencies": {
-    "next": "^13.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.0.0"
   }
 }

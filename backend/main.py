@@ -1,35 +1,34 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from chatbot import CustomChatBot
 from typing import List, Optional
 from database import SessionLocal, ChatHistory
 from sqlalchemy.orm import Session
-from fastapi import Depends
+from datetime import datetime
 
 app = FastAPI(title="Mühendislik Asistanı API")
 
 # CORS ayarları
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Güvenlik için production'da spesifik origin'leri belirtin
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Sohbet botu örneği
 chat_bot = CustomChatBot()
 
 class Message(BaseModel):
     content: str
     user_id: int
+
 class ChatResponse(BaseModel):
     response: str
     success: bool
     error: Optional[str] = None
 
-# Database bağlantısı için dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -37,40 +36,73 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/get/messages")
-async def root():
-    db = SessionLocal()
-    messages = db.query(ChatHistory).filter_by(user_id=1).all()
-    return {"messages": messages}
+@app.get("/get/messages/{user_id}", response_model=List[dict])
+async def get_messages(user_id: int, db: Session = Depends(get_db)):
+    try:
+        messages = db.query(ChatHistory).filter_by(user_id=user_id).all()
+        
+        return [
+            {
+                "id": msg.id,
+                "user_message": msg.user_message,
+                "bot_response": msg.bot_response,
+                "timestamp": msg.timestamp.isoformat()
+            }
+            for msg in messages
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/history/{user_id}", response_model=List[dict])
+async def chat_history(user_id: int, db: Session = Depends(get_db)):
+    try:
+        messages = db.query(ChatHistory).filter_by(user_id=user_id).all()
+        return [
+            {
+                "id": msg.id,
+                "user_message": msg.user_message,
+                "bot_response": msg.bot_response,
+                "timestamp": msg.timestamp.isoformat()
+            }
+            for msg in messages
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(message: Message, db: Session = Depends(get_db)):
     try:
-        user_history = db.query(ChatHistory).filter_by(user_id=1).all()
-        chat_history_str = ""
-        for history in user_history:
-            chat_history_str += f"User: {history.user_message}\nBot: {history.bot_response}\n"
-            full_message = f"{chat_history_str}User: {message.content}"
-        response = chat_bot.get_response(full_message)
-        
-        # Sohbeti veritabanına kaydet
-        chat_record = ChatHistory(
-            user_message=message.content,
-            user_id=1,
-            bot_response=response
+        user_history = db.query(ChatHistory).filter_by(user_id=message.user_id).all()
+        chat_context = "\n".join(
+            [f"User: {msg.user_message}\nBot: {msg.bot_response}" 
+             for msg in user_history]
         )
-        db.add(chat_record)
+        full_message = f"{chat_context}\nUser: {message.content}" if chat_context else message.content
+        response = chat_bot.get_response(full_message)
+        new_record = ChatHistory(
+            user_id=message.user_id,
+            user_message=message.content,
+            bot_response=response,
+            timestamp=datetime.utcnow()
+        )
+        db.add(new_record)
         db.commit()
-        
         return ChatResponse(response=response, success=True)
     except Exception as e:
-        print(e)
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/clear", response_model=ChatResponse)
-async def clear_history():
+@app.post("/clear/{user_id}", response_model=ChatResponse)
+async def clear_history(user_id: int, db: Session = Depends(get_db)):
     try:
-        response = chat_bot.clear_history()
-        return ChatResponse(response=response, success=True)
+        db.query(ChatHistory).filter_by(user_id=user_id).delete()
+        db.commit()
+        chat_bot.clear_history()
+        return ChatResponse(response="Geçmiş temizlendi", success=True)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000) 
