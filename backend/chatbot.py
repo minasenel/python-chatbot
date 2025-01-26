@@ -78,9 +78,6 @@ class CustomChatBot:
             if not any(emoji in assistant_response for category in self.response_emojis.values() for emoji in category):
                 assistant_response = f"{random.choice(self.response_emojis[category])} {assistant_response}"
             
-            if "konuşmalar kaydediliyor mu" in user_input.lower():
-                assistant_response = "Evet, konuşmalarınız kaydediliyor ve daha sonra görüntülenebilir! 😊"
-            
             self.conversation_history.append({"role": "assistant", "content": assistant_response})
             
             return assistant_response
